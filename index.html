@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGIS Kampus - Informasi Gedung</title>
+    <!-- LEAFLET CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            width: 100%;
+            height: 90vh;
+            border-top: 4px solid #333;
+        }
+
+        header {
+            text-align: center;
+            padding: 10px;
+            background-color: #333;
+            color: white;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <header>WebGIS Kampus - Informasi Gedung</header>
+    
+    <div id="map"></div>
+
+    <!-- LEAFLET JAVASCRIPT -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Data GeoJSON dalam format JavaScript -->
+    <script src="data.js"></script> <!-- pastikan path ini benar -->
+
+    <script>
+        var map = L.map('map').setView([-5.367016, 105.317890], 15);
+
+        var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        });
+        
+        osm.addTo(map);
+
+        var baseMaps = {
+            "OpenStreetMap": osm
+        };
+
+        var overlayMaps = {}; // Untuk menampung setiap gedung sebagai layer agar bisa dipilih
+
+        function onEachFeature(feature, layer) {
+            if (feature.properties && feature.properties.Name) {
+                layer.bindPopup(`<strong>${feature.properties.Name}</strong>`);
+            }
+        }
+
+        // Menentukan ikon kustom untuk marker
+        var customIcon = L.icon({
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        // Menambahkan data dari variabel geojsonData ke peta
+        var geojsonLayer = L.geoJSON(geojsonData, {
+            onEachFeature: onEachFeature,
+            pointToLayer: function (feature, latlng) {
+                if (feature.geometry.type === "Point") {
+                    // Menampilkan setiap titik sebagai marker dengan ikon kustom
+                    return L.marker(latlng, { icon: customIcon });
+                } else if (feature.geometry.type === "Polygon") {
+                    // Menampilkan poligon dengan warna yang sesuai
+                    return L.polygon(feature.geometry.coordinates[0].map(c => [c[1], c[0]]), {
+                        color: feature.properties.color,
+                        fillColor: feature.properties.fillColor,
+                        fillOpacity: feature.properties.fillOpacity
+                    });
+                }
+            }
+        });
+
+        geojsonLayer.eachLayer(function(layer) {
+            if (layer.feature.properties && layer.feature.properties.Name) {
+                overlayMaps[layer.feature.properties.Name] = layer; // Menambahkan setiap layer ke dalam overlayMaps
+            }
+        });
+
+        geojsonLayer.addTo(map);
+        L.control.layers(baseMaps, overlayMaps, {collapsed: false}).addTo(map); // Menambahkan kontrol layer
+        L.control.scale({position: 'bottomright'}).addTo(map);
+    </script>
+</body>
+</html>
